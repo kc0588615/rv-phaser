@@ -1,10 +1,11 @@
 import { IGem } from '../types/Gem'
 import { IGridPosition } from '../types/GridPosition'
 import { ISwapResult } from '../types/SwapResult'
-import GemTypes from '../../constants/GemTypes'
+import { GemTypes } from '../../constants/GemTypes'
 import TextureKeys from '../../constants/TextureKeys'
 import { MoveAction } from '../types/MoveAction';
-import { BackendPuzzleState, ExplodeAndReplacePhase, Match, BackendGem } from './BackendPuzzleState'; // Import BackendPuzzleState and related types
+import { BackendPuzzleState } from './BackendPuzzleState';
+import { ExplodeAndReplacePhase, Match, BackendGem } from './BackendTypes';
 
 interface RowColTransform {
     axis: 'row' | 'col';
@@ -109,6 +110,8 @@ export default class GridController {
                 return TextureKeys.RED_GEM
             case GemTypes.YELLOW:
                 return TextureKeys.YELLOW_GEM
+            default:
+                return TextureKeys.BLUE_GEM // Default fallback
         }
     }
 
@@ -154,19 +157,37 @@ export default class GridController {
         const defaultX = this.defaultGemPositions[gridX][gridY].x;
         let newX = defaultX + magnitude;
         const gridWidthPixels = this.gridWidth * (this.gemSize + this.margin);
-        return this.wrapValue(newX, this.offsetX - gridWidthPixels / 2 + this.gemSize/2, this.offsetX + gridWidthPixels / 2 - this.gemSize/2);
+        
+        // Allow movement beyond grid boundaries for smooth wrapping
+        if (newX < this.offsetX - this.gemSize) {
+            newX += gridWidthPixels;
+        } else if (newX > this.offsetX + gridWidthPixels) {
+            newX -= gridWidthPixels;
+        }
+        
+        return newX;
     }
 
     private getWrappedPixelY(gridX: number, gridY: number, magnitude: number): number {
         const defaultY = this.defaultGemPositions[gridX][gridY].y;
         let newY = defaultY + magnitude;
         const gridHeightPixels = this.gridHeight * (this.gemSize + this.margin);
-        return this.wrapValue(newY, this.offsetY - gridHeightPixels / 2 + this.gemSize/2, this.offsetY + gridHeightPixels / 2 - this.gemSize/2);
+        
+        // Allow movement beyond grid boundaries for smooth wrapping
+        if (newY < this.offsetY - this.gemSize) {
+            newY += gridHeightPixels;
+        } else if (newY > this.offsetY + gridHeightPixels) {
+            newY -= gridHeightPixels;
+        }
+        
+        return newY;
     }
 
     private wrapValue(value: number, min: number, max: number): number {
         const range = max - min;
-        return ((value - min) % range + range) % range + min;
+        while (value < min) value += range;
+        while (value > max) value -= range;
+        return value;
     }
 
     public resetGemPositions(): void {
@@ -194,11 +215,23 @@ export default class GridController {
     }
 
     public getMoveFromRowColTransform(rowColTransform: RowColTransform): MoveAction | null {
+        const cellSize = this.gemSize + this.margin;
         let amount = 0;
+        
         if (rowColTransform.axis === 'row') {
-            amount = Math.round(rowColTransform.magnitude / this.gemSize); // Adjust based on gemSize and direction
+            // Calculate amount based on total width for smoother wrapping
+            const totalWidth = this.gridWidth * cellSize;
+            let normalizedMagnitude = rowColTransform.magnitude % totalWidth;
+            if (normalizedMagnitude > totalWidth / 2) normalizedMagnitude -= totalWidth;
+            if (normalizedMagnitude < -totalWidth / 2) normalizedMagnitude += totalWidth;
+            amount = Math.round(normalizedMagnitude / cellSize);
         } else if (rowColTransform.axis === 'col') {
-            amount = -Math.round(rowColTransform.magnitude / this.gemSize); // Negative for column, adjust based on gemSize and direction
+            // Calculate amount based on total height for smoother wrapping
+            const totalHeight = this.gridHeight * cellSize;
+            let normalizedMagnitude = rowColTransform.magnitude % totalHeight;
+            if (normalizedMagnitude > totalHeight / 2) normalizedMagnitude -= totalHeight;
+            if (normalizedMagnitude < -totalHeight / 2) normalizedMagnitude += totalHeight;
+            amount = -Math.round(normalizedMagnitude / cellSize); // Negative for column movement
         }
 
         if (amount !== 0) {

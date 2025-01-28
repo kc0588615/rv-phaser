@@ -1,58 +1,14 @@
-import { BackendGem, ExplodeAndReplacePhase, Match } from './BackendTypes'; // Adjust import path as needed
+import { BackendGem, ExplodeAndReplacePhase, Match, IBackendGem, IExplodeAndReplacePhase } from './BackendTypes';
 import { GemTypes } from '../../constants/GemTypes';
 import { MoveAction } from '../types/MoveAction';
+import { IGridPosition } from '../types/GridPosition';
 
-import * as Phaser from 'phaser'; // Import Phaser for utility functions if needed
-
-export { BackendGem, ExplodeAndReplacePhase, Match }; // Re-export for GridController
-
-interface IBackendGem {
-    gem_type: GemTypes;
-}
-
-export class BackendGem implements IBackendGem {
-    gem_type: GemTypes;
-
-    constructor(gem_type: GemTypes) {
-        this.gem_type = gem_type;
-    }
-
-    equals(other: BackendGem): boolean {
-        return this.gem_type === other.gem_type;
-    }
-}
+import * as Phaser from 'phaser';
 
 
-export interface IExplodeAndReplacePhase {
-    matches: Match[];
-    replacements: [number, GemTypes[]][]; // Tuple of column index and replacement GemTypes
-    isNothingToDo(): boolean;
-}
+export { BackendPuzzleState };
 
-export class ExplodeAndReplacePhase implements IExplodeAndReplacePhase {
-    matches: Match[];
-    replacements: [number, GemTypes[]][];
-
-    constructor(matches: Match[], replacements: [number, GemTypes[]][]) {
-        this.matches = matches;
-        this.replacements = replacements;
-    }
-
-    isNothingToDo(): boolean {
-        return this.matches.length === 0;
-    }
-}
-
-
-export type Match = IGridPosition[]; // Reuse IGridPosition from your types
-
-interface IGridPosition {
-    x: number;
-    y: number;
-}
-
-
-export class BackendPuzzleState {
+class BackendPuzzleState {
     puzzle_state: BackendGem[][];
     width: number;
     height: number;
@@ -117,7 +73,7 @@ export class BackendPuzzleState {
             });
 
 
-            this.applyExplodeAndReplacePhase({ matches, replacements });
+            this.applyExplodeAndReplacePhase(new ExplodeAndReplacePhase(matches, replacements));
             const nextMatches = this.getMatches(this.puzzle_state);
             if (nextMatches.length === matches.length) { // Prevent infinite loop if no new matches are formed
                 break;

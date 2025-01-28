@@ -6,4 +6,4 @@ enum GemTypes {
     YELLOW = 'yellow'
 }
 
-export default GemTypes
+export { GemTypes };
