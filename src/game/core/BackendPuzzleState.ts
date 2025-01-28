@@ -6,9 +6,7 @@ import { IGridPosition } from '../types/GridPosition';
 import * as Phaser from 'phaser';
 
 
-export { BackendPuzzleState };
-
-class BackendPuzzleState {
+export class BackendPuzzleState {
     puzzle_state: BackendGem[][];
     width: number;
     height: number;
@@ -207,6 +205,10 @@ class BackendPuzzleState {
         });
     }
 
+
+    public applyMove(moveAction: MoveAction): void {
+        this.puzzle_state = this.getPuzzleStateAfterMove(this.puzzle_state, moveAction);
+    }
 
     public reset(): void {
         this.puzzle_state = this.getInitialPuzzleStateWithNoMatches(this.width, this.height);

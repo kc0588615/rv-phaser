@@ -4,7 +4,7 @@ import { ISwapResult } from '../types/SwapResult'
 import { GemTypes } from '../../constants/GemTypes'
 import TextureKeys from '../../constants/TextureKeys'
 import { MoveAction } from '../types/MoveAction';
-import { BackendPuzzleState } from './BackendPuzzleState';
+import { BackendPuzzleState } from '../core/BackendPuzzleState';
 import { ExplodeAndReplacePhase, Match, BackendGem } from './BackendTypes';
 
 interface RowColTransform {
@@ -257,7 +257,9 @@ export default class GridController {
     private applyMoveToGrid(moveAction: MoveAction): void {
         if (moveAction.row_or_col === 'row') {
             const width = this.gridWidth;
-            const amount = moveAction.amount % width;
+            let amount = moveAction.amount % width;
+            // Normalize amount to be positive
+            if (amount < 0) amount += width;
             const rowIndex = moveAction.index;
 
             if (amount !== 0) {
@@ -267,29 +269,41 @@ export default class GridController {
                 for (let x = 0; x < width; x++) {
                     this.gems[x][rowIndex] = movedRow[x];
                     if (this.gems[x][rowIndex]) {
-                        this.gems[x][rowIndex].gridX = x; // Update gridX after move
-                        this.gems[x][rowIndex].gridY = rowIndex; // Update gridY after move
+                        this.gems[x][rowIndex].gridX = x;
+                        this.gems[x][rowIndex].gridY = rowIndex;
+                        // Update sprite position to match new grid position
+                        this.gems[x][rowIndex].sprite.setPosition(
+                            this.gridToPixelX(x),
+                            this.gridToPixelY(rowIndex)
+                        );
                     }
                 }
             }
-
-
         } else if (moveAction.row_or_col === 'col') {
             const height = this.gridHeight;
-            const amount = moveAction.amount % height;
+            let amount = moveAction.amount % height;
+            // Normalize amount to be positive
+            if (amount < 0) amount += height;
             const colIndex = moveAction.index;
 
-             if (amount !== 0) {
-                const movedColGems = [...this.gems[colIndex].slice(amount), ...this.gems[colIndex].slice(0, amount)];
+            if (amount !== 0) {
+                const movedColGems = [...this.gems[colIndex].slice(-amount), ...this.gems[colIndex].slice(0, this.gems[colIndex].length - amount)];
                 this.gems[colIndex] = movedColGems;
-                 for (let y = 0; y < height; y++) {
-                     if (this.gems[colIndex][y]) {
-                        this.gems[colIndex][y].gridX = colIndex; // Update gridX after move
-                        this.gems[colIndex][y].gridY = y; // Update gridY after move
-                     }
-                 }
+                for (let y = 0; y < height; y++) {
+                    if (this.gems[colIndex][y]) {
+                        this.gems[colIndex][y].gridX = colIndex;
+                        this.gems[colIndex][y].gridY = y;
+                        // Update sprite position to match new grid position
+                        this.gems[colIndex][y].sprite.setPosition(
+                            this.gridToPixelX(colIndex),
+                            this.gridToPixelY(y)
+                        );
+                    }
+                }
             }
         }
+        // Store new positions after move
+        this.storeDefaultGemPositions();
     }
 
      public getMatchesFromMove(moveAction: MoveAction): Match[] {
