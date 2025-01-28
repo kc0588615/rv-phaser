@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import { EventBus } from '../../EventBus';
+import { EventBus } from '../EventBus';
 import GridController from '../core/GridController';
 import { IGem } from '../types/Gem';
 
